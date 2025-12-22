@@ -8,10 +8,16 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'] ?? "default";
 
-/* ===========================
-   CONFIG BACKEND
-=========================== */
-$BACKEND_BASE = "http://127.0.0.1:8077"; // <<< CAMBIA QUI
+/**
+ * =========================
+ * CONFIG
+ * =========================
+ */
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'http://127.0.0.1:8077');
 
 /* ===========================
    UTILS
@@ -47,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($_POST['action'] ?? '') {
 
         case 'new_version':
-            backend_post("$BACKEND_BASE/prompt/save", [
+            backend_post("$API_BASE/prompt/save", [
                 "user_id" => $user_id,
                 "prompt_name" => $_POST['prompt_name'],
                 "content" => $_POST['content'],
@@ -58,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'activate_version':
-            backend_post("$BACKEND_BASE/prompt/activate", [
+            backend_post("$API_BASE/prompt/activate", [
                 "user_id" => $user_id,
                 "prompt_name" => $_POST['prompt_name'],
                 "version" => intval($_POST['version'])
@@ -67,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'update_feedback':
-            backend_post("$BACKEND_BASE/prompt/feedback", [
+            backend_post("$API_BASE/prompt/feedback", [
                 "user_id" => $user_id,
                 "id" => $_POST['id'],
                 "feedback" => $_POST['feedback']
@@ -76,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'delete_version':
-            backend_post("$BACKEND_BASE/prompt/delete", [
+            backend_post("$API_BASE/prompt/delete", [
                 "user_id" => $user_id,
                 "id" => $_POST['id']
             ]);
@@ -90,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 =========================== */
 
 $prompts = backend_get(
-    "$BACKEND_BASE/prompt/list?user_id=" . urlencode($user_id)
+    "$API_BASE/prompt/list?user_id=" . urlencode($user_id)
 ) ?? [];
 
 
@@ -100,12 +106,12 @@ $versions = [];
 
 if ($prompt_name) {
     $active = backend_get(
-        "$BACKEND_BASE/prompt/get/" . urlencode($prompt_name) . "?user_id=" . urlencode($user_id)
+        "$API_BASE/prompt/get/" . urlencode($prompt_name) . "?user_id=" . urlencode($user_id)
     );
     $active_version = $active['version'] ?? null;
 
     $versions = backend_get(
-        "$BACKEND_BASE/prompt/history/" . urlencode($prompt_name) . "?user_id=" . urlencode($user_id)
+        "$API_BASE/prompt/history/" . urlencode($prompt_name) . "?user_id=" . urlencode($user_id)
     ) ?? [];
 }
 ?>

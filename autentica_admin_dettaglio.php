@@ -12,7 +12,12 @@ if (!isset($_GET['id'])) {
 
 $id = $_GET['id'];
 
-$BACKEND_BASE = "http://127.0.0.1:8077";
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'http://127.0.0.1:8077');
+
 
 function backend_get($url) {
     $ch = curl_init($url);
@@ -26,7 +31,7 @@ function backend_get($url) {
     return json_decode($resp, true);
 }
 
-$data = backend_get("$BACKEND_BASE/admin/analisi/" . urlencode($id));
+$data = backend_get("$API_BASE/admin/analisi/" . urlencode($id));
 
 if (!$data || !isset($data['analisi'])) {
     die("Analisi non trovata");

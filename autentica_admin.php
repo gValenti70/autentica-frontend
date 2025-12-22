@@ -11,10 +11,12 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// ===============================
-// BACKEND CONFIG
-// ===============================
-$BACKEND_BASE = "http://127.0.0.1:8077"; // <-- adegua se serve
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'http://127.0.0.1:8077');
+
 
 function backend_get($url) {
     $ch = curl_init($url);
@@ -43,7 +45,7 @@ $query = http_build_query(array_filter([
     "stato"  => $stato
 ]));
 
-$rows = backend_get("$BACKEND_BASE/admin/analisi?$query");
+$rows = backend_get("$API_BASE/admin/analisi?$query");
 ?>
 <!DOCTYPE html>
 <html lang="it">

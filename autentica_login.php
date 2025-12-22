@@ -1,7 +1,12 @@
 <?php
 session_start();
 
-$BACKEND_BASE = "http://127.0.0.1:8077";
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'http://127.0.0.1:8077');
+
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -11,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         "password" => $_POST["password"] ?? ""
     ]);
 
-    $ch = curl_init("$BACKEND_BASE/auth/login");
+    $ch = curl_init("$API_BASE/auth/login");
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,

@@ -1,15 +1,21 @@
 <?php
 session_start();
-
 /**
  * =========================
  * CONFIG
  * =========================
  */
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'http://127.0.0.1:8077');
+
+
 $max_steps = 7;
 
 // Se sei in locale:
-$API_BASE = "http://127.0.0.1:8077";
+
 // Se sei su Azure (decommenta quando serve):
 // $API_BASE = "https://autentica-dqcbd5brdthhbeb2.swedencentral-01.azurewebsites.net";
 
