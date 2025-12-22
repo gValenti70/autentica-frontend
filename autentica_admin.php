@@ -1,55 +1,49 @@
 <?php
 session_start();
 
-// Controllo login
+// ===============================
+// AUTH
+// ===============================
 if (!isset($_SESSION['user_id'])) {
     header("Location: autentica_login.php?pag=autentica_admin.php");
     exit;
 }
 
-// Connessione MySQL
-$mysqli = new mysqli("localhost", "root", "", "autentica");
-if ($mysqli->connect_errno) {
-    die("Errore MySQL: " . $mysqli->connect_error);
+$user_id = $_SESSION['user_id'];
+
+// ===============================
+// BACKEND CONFIG
+// ===============================
+$BACKEND_BASE = "http://127.0.0.1:8077"; // <-- adegua se serve
+
+function backend_get($url) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15
+    ]);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$resp) return [];
+    return json_decode($resp, true) ?: [];
 }
 
-// --- FILTRI ---
-$search = isset($_GET['search']) ? trim($_GET['search']) : "";
-$stato = isset($_GET['stato']) ? trim($_GET['stato']) : "";
+// ===============================
+// FILTRI
+// ===============================
+$search = $_GET['search'] ?? "";
+$stato  = $_GET['stato'] ?? "";
 
-// --- QUERY ---
-$sql = "
-    SELECT 
-        a.id,
-        a.user_id,
-        a.stato,
-        a.step_corrente,
-        a.marca_stimata,
-        a.modello_stimato,
-        a.percentuale_contraffazione,
-        (SELECT COUNT(*) FROM analisi_foto f WHERE f.id_analisi = a.id) AS totale_foto,
-        (SELECT MAX(step) FROM analisi_foto f2 WHERE f2.id_analisi = a.id) AS last_step,
-        a.created_at
-    FROM analisi a
-    WHERE 1=1
-";
+// ===============================
+// QUERY BACKEND
+// ===============================
+$query = http_build_query(array_filter([
+    "search" => $search,
+    "stato"  => $stato
+]));
 
-if ($search !== "") {
-    $search_safe = $mysqli->real_escape_string($search);
-    $sql .= " AND (a.id LIKE '%$search_safe%' 
-                OR a.user_id LIKE '%$search_safe%'
-                OR a.marca_stimata LIKE '%$search_safe%'
-                OR a.modello_stimato LIKE '%$search_safe%')";
-}
-
-if ($stato !== "") {
-    $stato_safe = $mysqli->real_escape_string($stato);
-    $sql .= " AND a.stato = '$stato_safe'";
-}
-
-$sql .= " ORDER BY a.created_at DESC";
-
-$result = $mysqli->query($sql);
+$rows = backend_get("$BACKEND_BASE/admin/analisi?$query");
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -59,10 +53,7 @@ $result = $mysqli->query($sql);
 <link rel="icon" type="image/png" href="images/autentica.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- Titillium Web (ADM style) -->
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -74,26 +65,20 @@ $result = $mysqli->query($sql);
     --adm-border: #d0d7e2;
     --adm-text: #243447;
     --adm-gray: #6b7480;
-    --adm-dark: #1b1b1b;
 }
 
-
-* {
-    font-family: "Titillium Web", system-ui, sans-serif;
-}
+* { font-family: "Titillium Web", system-ui, sans-serif; }
 
 body {
     background: var(--adm-bg);
     color: var(--adm-text);
-    margin: 0;
 }
 
-/* Header ADM */
 .adm-topbar {
     background: var(--adm-blue);
     color: #fff;
-    padding: 0.35rem 0;
-    font-size: 0.78rem;
+    padding: .35rem 0;
+    font-size: .78rem;
 }
 
 .adm-header {
@@ -139,90 +124,53 @@ body {
     color: #808894;
 }
 
-/* Breadcrumb */
-.adm-breadcrumb {
-    background: #fff;
-    border-bottom: 1px solid var(--adm-border);
-}
-
-.adm-breadcrumb-inner {
-    padding: .55rem 0;
-    font-size: .78rem;
-    color: var(--adm-gray);
-}
-
-/* Buttons */
-
-
-.btn-adm-secondary {
-    background: var(--adm-blue-light);
-    border-color: var(--adm-blue);
-    color: var(--adm-blue);
-    font-weight: 600;
-}
-
-
-.btn-adm-secondary:hover {
-    background: #d9e3f7;
-    color: var(--adm-blue);
-}
-.btn-adm-primary {
-    background: var(--adm-blue);
-    border-color: var(--adm-blue);
-    color: #fff;
-    font-weight: 600;
-}
-
-.btn-adm-primary:hover {
-    background: var(--adm-blue-light);
-    border-color: var(--adm-blue-light);
-}
-
-.btn-adm-outline {
-    border-radius: 999px;
-    font-size: .75rem;
-    padding: .25rem .75rem;
-}
-
-/* Table */
-.table thead {
-    background: var(--adm-blue-soft);
-}
-
-.table td, .table th {
-    vertical-align: middle;
-}
-
-/* Badges */
-.badge-lg {
-    font-size: 0.9rem;
-    padding: .45em .8em;
-}
-
-/* Filter box */
 .filter-box {
     background: #fff;
     border: 1px solid var(--adm-border);
     padding: 1rem;
     border-radius: 8px;
 }
+
+.table thead {
+    background: var(--adm-blue-soft);
+}
+
+.badge-lg {
+    font-size: .9rem;
+    padding: .45em .8em;
+}
+
+.btn-adm-primary {
+    background: var(--adm-blue);
+    border-color: var(--adm-blue);
+    color: #ffffffff;
+    font-weight: 600;
+}
+
+.btn-adm-primary:hover {
+    background: #002e63;
+    border-color: #002e63;
+    color: white;
+}
+.btn-adm-secondary { background:#e6ecf7;border-color:#003b80;color:#003b80;font-weight:600; }
+
 </style>
 
 </head>
+
 <body>
 
 <!-- TOP BAR -->
 <div class="adm-topbar">
     <div class="container d-flex justify-content-between">
         <span>Portale Autentica – Area Riservata</span>
-        <span>Utente: <strong><?= htmlentities($_SESSION['user_id']) ?></strong></span>
+        <span>Utente: <strong><?= htmlentities($user_id) ?></strong></span>
     </div>
 </div>
 
 <!-- HEADER -->
 <header class="adm-header">
     <div class="container adm-header-inner">
-
         <div class="adm-logo">
             <div class="adm-logo-symbol">ADM</div>
             <div class="adm-logo-text">
@@ -230,39 +178,27 @@ body {
                 <span>dashboard analisi</span>
             </div>
         </div>
-
-        <div class="d-flex" style="gap:.5rem;">
-            <a href="autentica.php?reset=1" class="btn btn-sm btn-adm-secondary">⬅️ Torna all'app</a>
-        </div>
+        <a href="autentica.php?reset=1" class="btn btn-adm-secondary">⬅ Torna all'app</a>
     </div>
 </header>
 
-
 <div class="container py-4">
 
-<!-- TITLE -->
 <h3 class="mb-3" style="color:var(--adm-blue); font-weight:700;">📊 Dashboard Analisi</h3>
 
 <!-- FILTRI -->
 <div class="filter-box mb-4">
-
 <form method="GET" class="row g-3">
-
     <div class="col-md-4">
-        <input 
-            type="text" 
-            name="search" 
-            value="<?= htmlentities($search); ?>"
-            class="form-control" 
-            placeholder="Cerca ID, utente, marca, modello..."
-        >
+        <input type="text" name="search" value="<?= htmlentities($search) ?>"
+               class="form-control" placeholder="Cerca ID, utente, marca, modello">
     </div>
 
     <div class="col-md-3">
         <select name="stato" class="form-control">
             <option value="">Tutti gli stati</option>
-            <option value="in_corso"    <?= $stato=="in_corso" ? "selected" : "" ?>>In corso</option>
-            <option value="completata"  <?= $stato=="completata" ? "selected" : "" ?>>Completata</option>
+            <option value="in_corso"   <?= $stato=="in_corso" ? "selected" : "" ?>>In corso</option>
+            <option value="completata" <?= $stato=="completata" ? "selected" : "" ?>>Completata</option>
         </select>
     </div>
 
@@ -273,11 +209,8 @@ body {
     <div class="col-md-2">
         <a href="autentica_admin.php" class="btn btn-secondary w-100">Reset</a>
     </div>
-
 </form>
-
 </div>
-
 
 <!-- TABLE -->
 <div class="card shadow-sm">
@@ -285,77 +218,72 @@ body {
 
 <table class="table table-bordered table-hover align-middle">
 <thead>
-    <tr>
-        <th>ID</th>
-        <th>Utente</th>
-        <th>Stato</th>
-        <th>Marca</th>
-        <th>Modello</th>
-        <th>Foto</th>
-        <th>Step</th>
-        <th>%</th>
-        <th>Data</th>
-        <th></th>
-    </tr>
+<tr>
+    <th>ID</th>
+    <th>Utente</th>
+    <th>Stato</th>
+    <th>Marca</th>
+    <th>Modello</th>
+    <th>Foto</th>
+    <th>Step</th>
+    <th>%</th>
+    <th>Data</th>
+    <th></th>
+</tr>
 </thead>
 <tbody>
 
-<?php while ($row = $result->fetch_assoc()): ?>
-
+<?php if (!$rows): ?>
 <tr>
-    <td><?= $row['id'] ?></td>
-    <td><?= htmlentities($row['user_id']) ?></td>
+    <td colspan="10" class="text-center text-muted">Nessuna analisi trovata</td>
+</tr>
+<?php endif; ?>
+
+<?php foreach ($rows as $r): ?>
+<tr>
+    <td><?= htmlentities($r['id']) ?></td>
+    <td><?= htmlentities($r['user_id']) ?></td>
 
     <td>
-        <?php if ($row['stato'] == 'completata'): ?>
+        <?php if ($r['stato'] === 'completata'): ?>
             <span class="badge bg-success">Completata</span>
         <?php else: ?>
             <span class="badge bg-warning text-dark">In corso</span>
         <?php endif; ?>
     </td>
 
-    <td><?= htmlentities($row['marca_stimata']) ?></td>
-    <td><?= htmlentities($row['modello_stimato']) ?></td>
+    <td><?= htmlentities($r['marca_stimata']) ?></td>
+    <td><?= htmlentities($r['modello_stimato']) ?></td>
 
     <td class="text-center">
-        <span class="badge bg-info text-dark">
-            <?= intval($row['totale_foto']); ?> foto
-        </span>
+        <span class="badge bg-info text-dark"><?= intval($r['totale_foto']) ?> foto</span>
     </td>
 
-    <td class="text-center">
-        <strong><?= ($row['last_step'] ? $row['last_step'] : 1); ?></strong>
-    </td>
+    <td class="text-center"><strong><?= intval($r['last_step']) ?></strong></td>
 
     <td class="text-center">
-        <?php 
-        $p = $row['percentuale_contraffazione'];
+        <?php
+        $p = $r['percentuale_contraffazione'];
         if (is_numeric($p)) {
-            if ($p < 33) {
-                echo "<span class='badge bg-success badge-lg'>{$p}%</span>";
-            } elseif ($p < 70) {
-                echo "<span class='badge bg-warning text-dark badge-lg'>{$p}%</span>";
-            } else {
-                echo "<span class='badge bg-danger badge-lg'>{$p}%</span>";
-            }
+            if ($p < 33) echo "<span class='badge bg-success badge-lg'>{$p}%</span>";
+            elseif ($p < 70) echo "<span class='badge bg-warning text-dark badge-lg'>{$p}%</span>";
+            else echo "<span class='badge bg-danger badge-lg'>{$p}%</span>";
         } else {
             echo "<span class='badge bg-secondary'>N.D.</span>";
         }
         ?>
     </td>
 
-    <td><?= $row['created_at'] ?></td>
+    <td><?= htmlentities($r['created_at']) ?></td>
 
     <td class="text-center">
-        <a href="autentica_admin_dettaglio.php?id=<?= $row['id'] ?>" 
+        <a href="autentica_admin_dettaglio.php?id=<?= urlencode($r['id']) ?>"
            class="btn btn-sm btn-adm-primary">
             Apri
         </a>
     </td>
-
 </tr>
-
-<?php endwhile; ?>
+<?php endforeach; ?>
 
 </tbody>
 </table>
@@ -364,6 +292,5 @@ body {
 </div>
 
 </div>
-
 </body>
 </html>

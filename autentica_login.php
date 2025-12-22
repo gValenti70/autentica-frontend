@@ -1,172 +1,171 @@
 <?php
 session_start();
-include "open_db.php"; // deve definire $conn
 
+$BACKEND_BASE = "http://127.0.0.1:8077";
 $error = "";
 
-/***************************************************
- * LOGIN SUBMIT
- ***************************************************/
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["user"]) && !empty($_POST["pwd"])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $_SESSION['qualifica'] = "";
-    $_SESSION['profili']   = [];
+    $payload = json_encode([
+        "user_id"  => $_POST["user_id"] ?? "",
+        "password" => $_POST["password"] ?? ""
+    ]);
 
-    $myUserID   = strtoupper(trim(str_replace("'", "`", $_POST["user"])));
-    $myPassword = $_POST["pwd"];
+    $ch = curl_init("$BACKEND_BASE/auth/login");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 15
+    ]);
 
-    /***************************************************
-     * Carico l'elenco dei profili (admin, viewer, ...)
-     ***************************************************/
-    $profili_arr = [];
-    $sql = "SELECT qualifica FROM profili";
-    $result = mysqli_query($conn, $sql);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
 
-    while ($row = mysqli_fetch_assoc($result)) {
-        $profili_arr[] = $row["qualifica"];
-    }
+    if ($code === 200) {
+        $data = json_decode($resp, true);
 
-    /***************************************************
-     * Recupero l’utente dalla vista v_anagrafica_personale
-     ***************************************************/
-    $sql = "
-        SELECT *
-        FROM v_anagrafica_personale
-        WHERE UCASE(userid) = ?
-          AND fl_attivo = TRUE
-        LIMIT 1
-    ";
+        $_SESSION["user_id"] = $data["user_id"];
+        $_SESSION["role"]    = $data["role"];
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $myUserID);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    if ($res->num_rows > 0) {
-
-        $row = $res->fetch_assoc();
-        $stored_hash = $row['password'];
-
-        /***************************************************
-         * Verifica password (hash BCRYPT / PASSWORD_DEFAULT)
-         ***************************************************/
-        if (password_verify($myPassword, $stored_hash)) {
-
-            $_SESSION['qualifica'] = $row['qualifica'];
-            $_SESSION['nome']      = $row['nome'];
-            $_SESSION['cognome']   = strtoupper($row['cognome']);
-            $_SESSION['user_id']    = $row['userid'];
-            $_SESSION['home']      = 'autentica.php';
-            $_SESSION['profili']   = [];
-
-            // Costruzione lista profili attivi
-            foreach ($profili_arr as $profile) {
-                if (isset($row[$profile]) && $row[$profile] == 1) {
-                    $_SESSION['profili'][] = $profile;
-                }
-            }
-
-            header("Location: " . $_SESSION['home']);
-            exit;
-
-        } else {
-            $error = "Password errata.";
-        }
+        $redirect = $_GET["pag"] ?? "autentica.php";
+        header("Location: $redirect");
+        exit;
     } else {
-        $error = "Utente non trovato o non attivo.";
+        $error = "Credenziali non valide";
     }
 }
-
-/***************************************************
- * Cambio profilo senza login (come tuo codice)
- ***************************************************/
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["profile"])) {
-
-    $_SESSION['qualifica'] = $_POST["profile"];
-
-    $sql = "SELECT * FROM profili WHERE qualifica='" . $_SESSION['qualifica'] . "'";
-    $result = mysqli_query($conn, $sql);
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        $_SESSION['home'] = $row['home'];
-    }
-
-    header("Location: " . $_SESSION['home']);
-    exit;
-}
-
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Autentica — Login</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<meta charset="UTF-8">
+<title>Autentica – Accesso Riservato</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="icon" type="image/png" href="images/autentica.png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <style>
-    body {
-        background: linear-gradient(135deg, #f4f4f4, #eaeaea);
-        font-family: "Inter", sans-serif;
-    }
-    .login-card {
-        border-radius: 20px;
-        padding: 40px;
-        background: #fff;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.08);
-        animation: fadeIn .6s ease;
-    }
-    .brand-logo {
-        font-size: 42px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-    .btn-premium {
-        background: #000;
-        color: #fff;
-        font-weight: 600;
-        padding: 12px;
-        border-radius: 12px;
-        border: none;
-        transition: .2s;
-    }
-    .btn-premium:hover {
-        background: #333;
-        transform: translateY(-2px);
-    }
-    @keyframes fadeIn {
-        from { opacity:0; transform:translateY(20px); }
-        to   { opacity:1; transform:translateY(0); }
-    }
+:root {
+    --adm-blue: #003b70;
+    --adm-blue-light: #e6ecf7;
+    --adm-bg: #f5f6fa;
+    --adm-border: #d0d7e2;
+    --adm-text: #243447;
+    --adm-gray: #6b7480;
+}
+
+* {
+    font-family: "Titillium Web", system-ui, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #eef2f8, #f7f9fc);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--adm-text);
+}
+
+.login-card {
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 12px;
+    border: 1px solid var(--adm-border);
+    box-shadow: 0 10px 35px rgba(0,0,0,.08);
+    padding: 28px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.login-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--adm-blue), var(--adm-blue-light));
+    color: #fff;
+    font-weight: 700;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+}
+
+.login-header h4 {
+    margin: 0;
+    font-weight: 700;
+    color: var(--adm-blue);
+}
+
+.login-header small {
+    color: var(--adm-gray);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: .7rem;
+}
+
+.btn-adm-primary {
+    background: var(--adm-blue);
+    border-color: var(--adm-blue);
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-adm-primary:hover {
+    background: #002e5c;
+    border-color: #002e5c;
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: .85rem;
+}
 </style>
 </head>
 
-<body class="d-flex align-items-center justify-content-center vh-100">
+<body>
 
-<div class="container" style="max-width: 420px;">
+<div class="login-card">
 
-    <div class="text-center mb-4">
-        <div class="brand-logo">AUTENTICA</div>
-        <p class="text-muted" style="letter-spacing:1px;">Luxury Authentication Suite</p>
+    <div class="login-header">
+        <div class="login-logo">ADM</div>
+        <h4>Autentica</h4>
+        <small>Accesso Riservato</small>
     </div>
 
-    <div class="login-card">
-        <h3 class="text-center mb-4">Accedi</h3>
+    <?php if ($error): ?>
+        <div class="alert alert-danger text-center py-2">
+            <?= htmlentities($error) ?>
+        </div>
+    <?php endif; ?>
 
-        <?php if ($error): ?>
-            <div class="alert alert-danger text-center"><?= $error ?></div>
-        <?php endif; ?>
+    <form method="POST">
 
-        <form method="POST">
-            <label class="fw-semibold">User ID</label>
-            <input type="text" name="user" class="form-control mb-3 p-3" required>
+        <div class="mb-3">
+            <label class="form-label">Utente</label>
+            <input type="text" name="user_id" class="form-control" required autofocus>
+        </div>
 
-            <label class="fw-semibold">Password</label>
-            <input type="password" name="pwd" class="form-control mb-4 p-3" required>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+        </div>
 
-            <button class="btn btn-premium w-100">Entra</button>
-        </form>
-    </div>
+        <button class="btn btn-adm-primary w-100 mt-2">
+            Accedi
+        </button>
+
+    </form>
 
 </div>
 
