@@ -5,7 +5,11 @@ session_start();
 // CONFIG
 // =============================================
 $max_steps = 7;
-$API_BASE = "autentica-dqcbd5brdthhbeb2.swedencentral-01.azurewebsites.net";
+function env(string $key, $default = null) {
+    $value = getenv($key);
+    return $value !== false ? $value : $default;
+}
+$API_BASE = env('API_BASE', 'https://autentica-dqcbd5brdthhbeb2.swedencentral-01.azurewebsites.net');
 
 // =============================================
 // LOGIN CHECK
@@ -730,3 +734,4 @@ if (form) {
 
 </body>
 </html>
+
