@@ -9,7 +9,7 @@ function env(string $key, $default = null) {
     return $value !== false ? $value : $default;
 }
 
-$API_BASE = env('API_BASE', 'https://autentica-dqcbd5brdthhbeb2.swedencentral-01.azurewebsites.net');
+$API_BASE = env('API_BASE', 'https://autentica-php-gjevhmb7b2fdf5ct.swedencentral-01.azurewebsites.net');
 $error = "";
 
 /* ===========================
@@ -226,6 +226,7 @@ body {
 
 </body>
 </html>
+
 
 
 
