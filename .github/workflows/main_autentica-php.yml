@@ -57,4 +57,4 @@ jobs:
           app-name: 'autentica-php'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BC8D376A40F949309EC53DA608BD2D5F }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_687CA8DC08D94B948DCADD1D9230D7D9 }}
