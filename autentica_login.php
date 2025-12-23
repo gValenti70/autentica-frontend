@@ -15,7 +15,7 @@ $error = "";
 /* ===========================
    BACKEND REACHABILITY TEST
    ⚠️ RIMUOVERE TUTTO QUESTO BLOCCO SE OK
-=========================== */
+=========================== 
 // [DEBUG]
 $backend_debug = null;
 
@@ -47,7 +47,7 @@ if ($API_BASE) {
     ];
 }
 // [DEBUG] FINE BLOCCO TEST BACKEND
-
+*/
 /* ===========================
    LOGIN
 =========================== */
@@ -226,6 +226,7 @@ body {
 
 </body>
 </html>
+
 
 
 
