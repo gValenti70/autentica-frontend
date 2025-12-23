@@ -651,5 +651,79 @@ if (form) {
 }
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("fotoForm");
+    if (!form) return;
+
+    form.addEventListener("submit", async function (e) {
+        const fileInput = form.querySelector('input[type="file"]');
+        if (!fileInput || !fileInput.files.length) return;
+
+        e.preventDefault(); // fermiamo submit originale
+
+        const originalFile = fileInput.files[0];
+
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            img.onload = () => {
+                const MAX_SIZE = 1280;
+                let { width, height } = img;
+
+                if (width > height && width > MAX_SIZE) {
+                    height *= MAX_SIZE / width;
+                    width = MAX_SIZE;
+                } else if (height > MAX_SIZE) {
+                    width *= MAX_SIZE / height;
+                    height = MAX_SIZE;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    blob => {
+                        const compressedFile = new File(
+                            [blob],
+                            "foto.jpg",
+                            { type: "image/jpeg" }
+                        );
+
+                        const dt = new DataTransfer();
+                        dt.items.add(compressedFile);
+                        fileInput.files = dt.files;
+
+                        const spinner = document.getElementById("loading-spinner");
+                        if (spinner) spinner.style.display = "block";
+
+                        console.log(
+                            "Original:",
+                            Math.round(originalFile.size / 1024),
+                            "KB → Compressed:",
+                            Math.round(blob.size / 1024),
+                            "KB"
+                        );
+
+                        form.submit(); // submit reale
+                    },
+                    "image/jpeg",
+                    0.8 // qualità
+                );
+            };
+            img.src = reader.result;
+        };
+
+        reader.readAsDataURL(originalFile);
+    });
+});
+</script>
+
 </body>
 </html>
+
